@@ -302,6 +302,7 @@
       <div><label>Secret password</label><input type="text" id="pub-secret" placeholder="the SECRET you set in Cloudflare"></div>
     </div>
     <button class="btn full" onclick="publishCalendar()">Publish live calendar</button>
+    <button class="btn secondary full" style="margin-top:8px;" onclick="loadFromLive()">Load from live calendar</button>
     <div class="status" id="publish-status"></div>
     <p class="help" id="publish-link-holder"></p>
   </section>
@@ -1048,6 +1049,61 @@ function showManualCopyFallback(containerId, content, filename){
   container.appendChild(label);
   container.appendChild(ta);
   container.appendChild(copyBtn);
+}
+
+async function loadFromLive(){
+  const statusEl = document.getElementById('publish-status');
+  let url = (state.publish.url || '').trim();
+  const secret = (state.publish.secret || '').trim();
+  if(!url || !secret){
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Enter your Worker URL and secret password first.';
+    return;
+  }
+  url = url.replace(/\/+$/, '');
+  statusEl.style.color = 'var(--text-dim)';
+  statusEl.textContent = 'Loading…';
+  try{
+    const res = await fetch(url + '/api/state', {
+      method: 'GET',
+      headers: { 'X-Auth-Token': secret }
+    });
+    if(res.status === 404){
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Nothing has been published yet from any device.';
+      return;
+    }
+    if(!res.ok){
+      throw new Error('Server responded with ' + res.status);
+    }
+    const parsed = await res.json();
+    if(!parsed || !Array.isArray(parsed.shiftTypes) || !Array.isArray(parsed.pattern)){
+      throw new Error('Unexpected data shape');
+    }
+    const keepPublish = state.publish;
+    state = Object.assign({
+      shiftTypes:[], pattern:Array(35).fill(''), rotaStart:'', overrides:{}, rates:{weekday:0,saturday:0,sunday:0}, publish:{url:'',secret:''}
+    }, parsed);
+    state.publish = keepPublish; // don't let the loaded copy wipe out the URL/secret you just typed
+    if(!state.overrides) state.overrides = {};
+    if(!state.rates) state.rates = {weekday:0,saturday:0,sunday:0};
+    const maxId = state.shiftTypes.reduce((m,s)=>{
+      const n = parseInt((s.id||'s0').slice(1),10);
+      return isNaN(n) ? m : Math.max(m,n);
+    },0);
+    nextId = maxId + 1;
+    document.getElementById('rota-start').value = state.rotaStart || '';
+    document.getElementById('rate-weekday').value = state.rates.weekday || '';
+    document.getElementById('rate-saturday').value = state.rates.saturday || '';
+    document.getElementById('rate-sunday').value = state.rates.sunday || '';
+    renderAll();
+    saveState();
+    statusEl.style.color = 'var(--teal)';
+    statusEl.textContent = 'Loaded the latest published version onto this device.';
+  }catch(e){
+    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent = 'Could not load — check the URL and secret are correct.';
+  }
 }
 
 loadState();
