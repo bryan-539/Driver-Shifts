@@ -845,7 +845,24 @@ function generateICS(months){
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Shift Rota App//EN',
-    'CALSCALE:GREGORIAN'
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VTIMEZONE',
+    'TZID:Europe/London',
+    'BEGIN:DAYLIGHT',
+    'TZOFFSETFROM:+0000',
+    'TZOFFSETTO:+0100',
+    'TZNAME:BST',
+    'DTSTART:19700329T010000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+    'END:DAYLIGHT',
+    'BEGIN:STANDARD',
+    'TZOFFSETFROM:+0100',
+    'TZOFFSETTO:+0000',
+    'TZNAME:GMT',
+    'DTSTART:19701025T020000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+    'END:STANDARD',
+    'END:VTIMEZONE'
   ];
 
   let count = 0;
@@ -886,8 +903,8 @@ function generateICS(months){
         const dtStart = new Date(cursor); dtStart.setHours(sh, sm, 0, 0);
         const dtEnd = new Date(cursor); dtEnd.setHours(eh, em, 0, 0);
         if(dtEnd <= dtStart){ dtEnd.setDate(dtEnd.getDate()+1); }
-        lines.push('DTSTART:' + dateToICSDateTime(dtStart, dtStart.getHours(), dtStart.getMinutes()));
-        lines.push('DTEND:' + dateToICSDateTime(dtEnd, dtEnd.getHours(), dtEnd.getMinutes()));
+        lines.push('DTSTART;TZID=Europe/London:' + dateToICSDateTime(dtStart, dtStart.getHours(), dtStart.getMinutes()));
+        lines.push('DTEND;TZID=Europe/London:' + dateToICSDateTime(dtEnd, dtEnd.getHours(), dtEnd.getMinutes()));
       }
       lines.push('SUMMARY:' + shift.name.replace(/,/g,'\\,'));
       lines.push('END:VEVENT');
